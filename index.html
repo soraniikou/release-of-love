@@ -1,1 +1,641 @@
 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Release of Love</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Noto+Serif+JP:wght@300;400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #020408;
+    color: white;
+    font-family: 'Cormorant Garamond', 'Noto Serif JP', serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #scene-label {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    opacity: 0.5;
+    text-transform: uppercase;
+    transition: all 1s ease;
+    font-weight: 300;
+    z-index: 20;
+  }
+
+  #stage-counter {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1rem;
+    letter-spacing: 0.4em;
+    opacity: 0.85;
+    color: #ffffff;
+    transition: all 0.8s ease;
+    white-space: nowrap;
+    z-index: 20;
+  }
+
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  #title-screen {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+  }
+  #title-screen.hidden { opacity: 0; }
+
+  #title {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.15em;
+    color: white;
+    text-shadow: 0 0 40px rgba(255,255,255,0.3);
+    line-height: 1.2;
+  }
+
+  #subtitle {
+    font-size: 0.7rem;
+    letter-spacing: 0.5em;
+    opacity: 0.4;
+    margin-top: 12px;
+    text-transform: uppercase;
+    color: white;
+  }
+
+  #message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateY(16px);
+    z-index: 10;
+    font-size: clamp(1.1rem, 3vw, 1.65rem);
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.07em;
+    color: rgba(255,255,255,0.95);
+    text-align: center;
+    width: 88vw;
+    max-width: 560px;
+    line-height: 1.9;
+    opacity: 0;
+    transition: opacity 1.2s ease, transform 1.2s ease;
+    text-shadow: 0 0 30px rgba(255,255,255,0.5);
+    pointer-events: none;
+  }
+  #message.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
+  }
+
+  #instruction {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1rem;
+    letter-spacing: 0.35em;
+    opacity: 0.85;
+    color: #ffffff;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 20;
+  }
+
+  /* 場面切替フラッシュ */
+  #flash {
+    position: fixed;
+    inset: 0;
+    background: white;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.15s ease;
+  }
+  #flash.on { opacity: 0.18; }
+
+  #share-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease;
+  }
+  #share-overlay.visible { display: flex; opacity: 1; pointer-events: all; }
+
+  #share-overlay h2 {
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    font-style: italic;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #fff 0%, hsl(60,100%,80%) 50%, #fff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #share-overlay p {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    opacity: 0.5;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+  .share-tagline {
+    font-size: 0.9rem;
+    letter-spacing: 0.15em;
+    opacity: 0.7;
+    margin-bottom: 40px;
+    font-style: italic;
+    max-width: 320px;
+    text-align: center;
+    line-height: 1.8;
+  }
+  .share-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    font-family: inherit;
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    padding: 14px 40px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    margin: 6px;
+  }
+  .share-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.6); }
+  .share-btn.primary { border-color: rgba(255,255,255,0.6); }
+
+  #restart-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.55);
+    font-family: inherit;
+    font-size: 1rem;
+    letter-spacing: 0.3em;
+    padding: 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    margin-top: 20px;
+    transition: color 0.3s ease;
+  }
+  #restart-btn:hover { color: rgba(255,255,255,0.9); }
+
+  .prism-particle {
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: prism-fly 2.5s ease-out forwards;
+  }
+  @keyframes prism-fly {
+    0%   { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="scene-label">Scene 1 · Reason</div>
+<canvas id="c"></canvas>
+<div id="flash"></div>
+
+<div id="title-screen">
+  <div id="title">Release of Love</div>
+  <div id="subtitle">tap to begin</div>
+</div>
+
+<div id="message"></div>
+<div id="stage-counter">Stage 0 / 11</div>
+<div id="instruction">tap · hold to deepen</div>
+
+<div id="share-overlay">
+  <div class="share-tagline"><span id="tagline-text"></span></div>
+  <button class="share-btn primary" onclick="copyTagline()">Copy &amp; Share</button>
+  <button class="share-btn" onclick="copyTagline()">Share on LINE</button>
+  <button id="restart-btn" onclick="restart()">Experience Again</button>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+const MESSAGES = [
+  "Let me hear your beautiful voice.",
+  "Cherish the feelings that are true.",
+  "Carrying my love for you within my heart.",
+  "You are my hope.",
+  "To feel anxious is to be alive.",
+  "Loving myself as I love you.",
+  "Becoming love, bit by bit.",
+  "Embracing even the shadows of hate.",
+  "Inviting you into my world.",
+  "I am falling in love with myself.",
+  "The happiness of simply being me."
+];
+
+// ステージ設定：各ステージで視覚的個性を持たせる
+const STAGES = [
+  // Scene 1: 理性 — 幾何学・青白・静か
+  { hue:220, speed:0.10, scene:1, label:'Scene 1 · Reason',  zoom:1.00, shake:0, shape:'ring',   petals:6,  label2:'Pianissimo' },
+  { hue:200, speed:0.20, scene:1, label:'Scene 1 · Reason',  zoom:1.05, shake:0, shape:'star',   petals:8,  label2:'Piano'       },
+  { hue:180, speed:0.32, scene:1, label:'Scene 1 · Reason',  zoom:1.10, shake:0, shape:'ring',   petals:10, label2:'Andante'     },
+  // Scene 2: 感情 — 花弁・紫・揺らぎ
+  { hue:270, speed:0.50, scene:2, label:'Scene 2 · Emotion', zoom:1.15, shake:0, shape:'petal',  petals:8,  label2:'Moderato'    },
+  { hue:290, speed:0.68, scene:2, label:'Scene 2 · Emotion', zoom:1.20, shake:0, shape:'petal',  petals:10, label2:'Allegretto'  },
+  { hue:310, speed:0.90, scene:2, label:'Scene 2 · Emotion', zoom:1.26, shake:1, shape:'petal',  petals:12, label2:'Allegro'     },
+  { hue:330, speed:1.15, scene:2, label:'Scene 2 · Emotion', zoom:1.32, shake:1, shape:'bloom',  petals:14, label2:'Vivace'      },
+  // Scene 3: 解放 — スパイラル・赤→白・爆発
+  { hue:350, speed:1.50, scene:3, label:'Scene 3 · Release', zoom:1.40, shake:2, shape:'spiral', petals:12, label2:'Presto'      },
+  { hue: 10, speed:2.00, scene:3, label:'Scene 3 · Release', zoom:1.50, shake:2, shape:'spiral', petals:16, label2:'Prestissimo' },
+  { hue: 30, speed:2.70, scene:3, label:'Scene 3 · Release', zoom:1.60, shake:3, shape:'burst',  petals:20, label2:'Furioso'     },
+  { hue: 55, speed:3.50, scene:3, label:'Scene 3 · Release', zoom:1.70, shake:4, shape:'prism',  petals:24, label2:'Liberato'    },
+];
+
+let stage = 0;
+let hueBase = 220;
+let targetSpeed = 0;
+let currentSpeed = 0;
+let targetZoom = 1.0;
+let currentZoom = 1.0;
+let shakeIntensity = 0;
+let targetShake = 0;
+let isHolding = false;
+let t = 0;
+let prismActive = false;
+let flashTimer = null;
+let prevScene = 1;
+
+function getStageConfig() {
+  if (stage === 0) return STAGES[0];
+  return STAGES[stage - 1];
+}
+
+function flash() {
+  const el = document.getElementById('flash');
+  el.classList.add('on');
+  setTimeout(() => el.classList.remove('on'), 200);
+}
+
+function showMessage(text) {
+  const el = document.getElementById('message');
+  el.classList.remove('visible');
+  setTimeout(() => { el.textContent = text; el.classList.add('visible'); }, 150);
+}
+
+function tap() {
+  if (stage >= 11) { showShare(); return; }
+  stage++;
+  const cfg = STAGES[stage - 1];
+  hueBase = cfg.hue;
+  targetSpeed = cfg.speed;
+  targetZoom = cfg.zoom;
+  targetShake = cfg.shake;
+
+  // 場面が変わるとき明るいフラッシュ
+  if (cfg.scene !== prevScene) {
+    flash();
+    prevScene = cfg.scene;
+  }
+
+  document.getElementById('scene-label').textContent = cfg.label;
+  document.getElementById('stage-counter').textContent = `Stage ${stage} / 11`;
+
+  if (stage === 1) {
+    document.getElementById('title-screen').classList.add('hidden');
+  }
+
+  showMessage(MESSAGES[stage - 1]);
+
+  if (stage === 11) triggerPrism();
+}
+
+function triggerPrism() {
+  prismActive = true;
+  for (let i = 0; i < 80; i++) {
+    const p = document.createElement('div');
+    p.className = 'prism-particle';
+    const angle = (i / 80) * Math.PI * 2;
+    const dist = 180 + Math.random() * 250;
+    const hue = (i / 80) * 360;
+    const size = 3 + Math.random() * 5;
+    p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:50%; top:50%;
+      background:hsl(${hue},100%,75%);
+      --tx:${Math.cos(angle)*dist}px;
+      --ty:${Math.sin(angle)*dist}px;
+      animation-delay:${Math.random()*0.4}s;
+      box-shadow:0 0 ${size*2}px hsl(${hue},100%,85%);
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3000);
+  }
+}
+
+function showShare() {
+  document.getElementById('share-overlay').classList.add('visible');
+  // 一文字ずつ時間差で表示
+  const text = 'live innocently';
+  const el = document.getElementById('tagline-text');
+  el.textContent = '';
+  text.split('').forEach((char, i) => {
+    setTimeout(() => {
+      el.textContent += char;
+    }, i * 120);
+  });
+}
+
+function copyTagline() {
+  navigator.clipboard.writeText('Release of Love\n11 taps to release everything\nhttps://release-of-love.vercel.app').catch(()=>{});
+  const btn = document.querySelector('.share-btn.primary');
+  btn.textContent = 'Copied! ✓';
+  setTimeout(() => btn.textContent = 'Copy & Share', 2000);
+}
+
+function restart() {
+  stage = 0; hueBase = 220; targetSpeed = 0; currentSpeed = 0;
+  targetZoom = 1.0; currentZoom = 1.0; targetShake = 0; shakeIntensity = 0;
+  prismActive = false; prevScene = 1; t = 0;
+  document.getElementById('share-overlay').classList.remove('visible');
+  document.getElementById('scene-label').textContent = 'Scene 1 · Reason';
+  document.getElementById('stage-counter').textContent = 'Stage 0 / 11';
+  document.getElementById('title-screen').classList.remove('hidden');
+  const el = document.getElementById('message');
+  el.classList.remove('visible'); el.textContent = '';
+}
+
+document.body.addEventListener('mousedown', () => { isHolding = true; });
+document.body.addEventListener('touchstart', e => { e.preventDefault(); isHolding = true; }, { passive: false });
+document.body.addEventListener('mouseup', () => { isHolding = false; });
+document.body.addEventListener('touchend', () => { isHolding = false; });
+document.body.addEventListener('click', tap);
+
+// ======= 描画 =======
+function drawMandala() {
+  const cfg = getStageConfig();
+  const sc = cfg.scene || 1;
+  const shape = cfg.shape || 'ring';
+  const petals = cfg.petals || 6;
+
+  // スムーズ補間
+  const speedMult = isHolding ? 1.6 : 1.0;
+  currentSpeed += (targetSpeed * speedMult - currentSpeed) * 0.03;
+  currentZoom  += (targetZoom - currentZoom) * 0.025;
+  shakeIntensity += (targetShake - shakeIntensity) * 0.05;
+  t += currentSpeed * 0.013;
+
+  // シェイク
+  const sx = shakeIntensity > 0.5 ? (Math.random()-0.5)*shakeIntensity*1.5 : 0;
+  const sy = shakeIntensity > 0.5 ? (Math.random()-0.5)*shakeIntensity*1.5 : 0;
+
+  const cx = W/2 + sx;
+  const cy = H/2 + sy;
+  // ズームでbaseRを拡大 = カメラが寄る感覚
+  const baseR = Math.min(W,H) * 0.28 * currentZoom;
+  const hue = hueBase;
+  const alpha = 0.18 + (stage/11)*0.45;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // 背景グラデーション
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W,H));
+  if (sc === 1) {
+    grad.addColorStop(0, `hsla(${hue},55%,14%,1)`);
+    grad.addColorStop(1, `hsla(${hue-20},35%,2%,1)`);
+  } else if (sc === 2) {
+    grad.addColorStop(0, `hsla(${hue},70%,12%,1)`);
+    grad.addColorStop(0.6, `hsla(${hue-20},50%,5%,1)`);
+    grad.addColorStop(1, `hsla(${hue-40},40%,2%,1)`);
+  } else {
+    grad.addColorStop(0, `hsla(${hue},90%,18%,1)`);
+    grad.addColorStop(0.5, `hsla(${hue-30},70%,8%,1)`);
+    grad.addColorStop(1, `hsla(${hue-60},50%,2%,1)`);
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // ===== 形状別描画 =====
+
+  if (shape === 'ring' || shape === 'star') {
+    // Scene 1: 幾何学リング＋星形
+    const layers = 3 + stage;
+    for (let layer = 0; layer < Math.min(layers, 7); layer++) {
+      const r = baseR * (0.25 + layer * 0.2);
+      const layerT = t * (1 + layer * 0.15);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(layerT * (layer % 2 === 0 ? 1 : -1));
+
+      // リング
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.strokeStyle = `hsla(${hue+layer*25},70%,75%,${alpha*0.5})`;
+      ctx.lineWidth = 1 + layer*0.3;
+      ctx.stroke();
+
+      // 星形の頂点を結ぶ線
+      if (shape === 'star') {
+        ctx.beginPath();
+        for (let i = 0; i <= petals; i++) {
+          const a = (i/petals)*Math.PI*2;
+          const rr = i%2===0 ? r : r*0.5;
+          if (i===0) ctx.moveTo(Math.cos(a)*rr, Math.sin(a)*rr);
+          else ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
+        }
+        ctx.strokeStyle = `hsla(${hue+layer*20},80%,80%,${alpha*0.4})`;
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+
+      // ドット
+      for (let i = 0; i < petals; i++) {
+        const a = (i/petals)*Math.PI*2;
+        const dr = 2 + layer*0.5;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a)*r, Math.sin(a)*r, dr, 0, Math.PI*2);
+        ctx.fillStyle = `hsla(${hue+i*15},90%,85%,${alpha*0.8})`;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+  } else if (shape === 'petal' || shape === 'bloom') {
+    // Scene 2: 花弁が広がる
+    const layers = 4 + Math.floor(stage/2);
+    for (let layer = 0; layer < Math.min(layers, 9); layer++) {
+      const r = baseR * (0.18 + layer * 0.19);
+      const layerT = t * (1 + layer * 0.1);
+      const pCount = petals + layer*2;
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      for (let p = 0; p < pCount; p++) {
+        const angle = (p/pCount)*Math.PI*2 + layerT*(layer%2===0?1:-0.7);
+        const pLen = r * 0.52;
+        const pW   = r * (shape==='bloom' ? 0.22 : 0.14);
+
+        ctx.save();
+        ctx.rotate(angle);
+
+        const pg = ctx.createLinearGradient(0, -pW, pLen, 0);
+        pg.addColorStop(0, `hsla(${hue+layer*18+p*4},85%,72%,${alpha})`);
+        pg.addColorStop(0.6,`hsla(${hue+layer*18+p*4+30},70%,55%,${alpha*0.6})`);
+        pg.addColorStop(1,  `hsla(${hue+layer*18+p*4+60},60%,40%,0)`);
+        ctx.fillStyle = pg;
+
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.quadraticCurveTo(pLen*0.45, -pW, pLen, 0);
+        ctx.quadraticCurveTo(pLen*0.45,  pW, 0, 0);
+        ctx.fill();
+
+        // 静脈ライン
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.lineTo(pLen*0.85, 0);
+        ctx.strokeStyle = `hsla(${hue+50},100%,90%,${alpha*0.35})`;
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+  } else if (shape === 'spiral' || shape === 'burst') {
+    // Scene 3: スパイラル＋爆発
+    const arms = shape === 'burst' ? petals : Math.floor(petals/2);
+    for (let arm = 0; arm < arms; arm++) {
+      const armOffset = (arm/arms)*Math.PI*2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(armOffset + t*0.3);
+
+      ctx.beginPath();
+      const steps = 300;
+      for (let i = 0; i < steps; i++) {
+        const frac = i/steps;
+        const angle = frac * Math.PI * (shape==='burst' ? 3 : 6);
+        const r = frac * baseR * 1.1;
+        const x = Math.cos(angle)*r;
+        const y = Math.sin(angle)*r;
+        if (i===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      }
+      const sg = ctx.createLinearGradient(0,0,baseR,0);
+      sg.addColorStop(0,   `hsla(${hue+arm*15},100%,80%,0)`);
+      sg.addColorStop(0.4, `hsla(${hue+arm*15},100%,75%,${alpha*0.8})`);
+      sg.addColorStop(1,   `hsla(${hue+arm*15+40},90%,90%,${alpha})`);
+      ctx.strokeStyle = sg;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 外周リング
+    ctx.save();
+    ctx.translate(cx, cy);
+    for (let ring = 1; ring <= 3; ring++) {
+      ctx.beginPath();
+      ctx.arc(0,0, baseR*ring*0.38, 0, Math.PI*2);
+      ctx.strokeStyle = `hsla(${hue},90%,80%,${alpha*0.25})`;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+  } else if (shape === 'prism') {
+    // Stage 11: 白い光が画面全体に満ちる
+    // 中心から広がる白いグロー
+    const glowR = baseR * (1.5 + Math.sin(t*0.8)*0.3);
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR);
+    glow.addColorStop(0,   'hsla(60,100%,100%,0.95)');
+    glow.addColorStop(0.2, 'hsla(50,100%,95%,0.7)');
+    glow.addColorStop(0.5, 'hsla(40,80%,85%,0.35)');
+    glow.addColorStop(0.8, 'hsla(30,60%,70%,0.12)');
+    glow.addColorStop(1,   'hsla(20,40%,60%,0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, glowR, 0, Math.PI*2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // 画面全体を白く染める（フェードイン）
+    const whiteAlpha = 0.18 + Math.sin(t*0.5)*0.08;
+    ctx.fillStyle = `rgba(255,255,255,${whiteAlpha})`;
+    ctx.fillRect(0, 0, W, H);
+
+    // 花びら型の光の粒が舞う
+    for (let i = 0; i < petals; i++) {
+      const angle = (i/petals)*Math.PI*2 + t*0.2;
+      const r = baseR * (0.4 + Math.sin(t*0.7 + i)*0.3);
+      const px = cx + Math.cos(angle)*r;
+      const py = cy + Math.sin(angle)*r;
+      const pr = 3 + Math.sin(t + i*0.5)*2;
+      const pg = ctx.createRadialGradient(px,py,0,px,py,pr*3);
+      pg.addColorStop(0, 'hsla(60,100%,100%,0.9)');
+      pg.addColorStop(1, 'hsla(50,100%,90%,0)');
+      ctx.beginPath();
+      ctx.arc(px, py, pr*3, 0, Math.PI*2);
+      ctx.fillStyle = pg;
+      ctx.fill();
+    }
+  }
+
+  // 中心の光点
+  const dotR = 5 + stage*2;
+  const dg = ctx.createRadialGradient(cx,cy,0,cx,cy,dotR*2);
+  dg.addColorStop(0, `hsla(${hue+60},100%,98%,1)`);
+  dg.addColorStop(0.4,`hsla(${hue+30},100%,85%,0.6)`);
+  dg.addColorStop(1,  `hsla(${hue},80%,60%,0)`);
+  ctx.beginPath();
+  ctx.arc(cx, cy, dotR*2, 0, Math.PI*2);
+  ctx.fillStyle = dg;
+  ctx.fill();
+
+  // 外周グロー
+  if (stage > 0) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, baseR*1.08, 0, Math.PI*2);
+    ctx.strokeStyle = `hsla(${hue},85%,65%,${0.06+(stage/11)*0.18})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+function loop() { drawMandala(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
