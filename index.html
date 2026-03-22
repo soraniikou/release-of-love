@@ -370,6 +370,8 @@ function showShare() {
   // 一文字ずつ時間差で表示
   const text = 'live innocently';
   const el = document.getElementById('tagline-text');
+  el.style.fontSize = '2rem';
+　el.style.letterSpacing = '0.15em';
   el.textContent = '';
   text.split('').forEach((char, i) => {
     setTimeout(() => {
